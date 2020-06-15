@@ -4,8 +4,20 @@ let car, car2, angle = Math.PI,
     velocity = 0,
     velocity2 = 0,
     start = false,
-    count = 3
+    count = 3,
+    bbHelper,
+    bbHelper2,
+    laps1 = 4,
+    laps2 = 4,
+    materialArray = [],
+    arrayImages = ['back.png',
+        'front.png',
+        'up.png', 'down.png',
+        'left.png', 'right.png'
+    ]
 
+let finish = new THREE.Object3D
+let track = new THREE.Object3D
 window.onload = function init() {
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight)
@@ -26,8 +38,6 @@ window.onload = function init() {
     camera.position.set(180, 200, 240)
     scene.add(camera)
 
-    /* camera.lookAt(0, 0, 0) */
-
     controls = new THREE.OrbitControls(camera);
     controls.addEventListener('change', function () {
         renderer.render(scene, camera);
@@ -43,25 +53,21 @@ window.onload = function init() {
     scene.add(spotLight);
     scene.add(spotLightHelper)
 
-    //Floor
-/*     let geometry = new THREE.PlaneGeometry(300, 300, 32);
-    let material = new THREE.MeshBasicMaterial({
-        color: "",
-        side: THREE.DoubleSide
-    })
-    let floor = new THREE.Mesh(geometry, material);
-    floor.rotateX(Math.PI / 2)
-    floor.castShadow = true
-    floor.receiveShadow = true
-    floor.position.set(0, -1, 0)
-    scene.add(floor) */
+    var loader = new THREE.CubeGeometry(500, 200, 500);
 
-
-
+    for (var i = 0; i < arrayImages.length; i++) {
+        materialArray.push(new THREE.MeshBasicMaterial({
+            map: new THREE.TextureLoader().load('models/' + arrayImages[i]),
+            side: THREE.BackSide
+        }))
+    }
+    let sky = new THREE.Mesh(loader, materialArray)
+    sky.position.set(0, 99, 0)
+    console.log(sky)
+    scene.add(sky)
     createCars()
     createTrack()
     animation()
-
 
 }
 window.addEventListener('keydown', keyPressed);
@@ -69,46 +75,45 @@ window.addEventListener('keyup', keyReleased);
 let keys = [];
 
 function timer() {
-    count= count-1
+    count = count - 1
     console.log(count)
 }
 
 function keyPressed(e) {
     keys[e.key] = true; //store an entry for every key pressed
-    if (e.key == "a")
+    if (keys["a"] == true)
         angle += 0.3;
-    else if (e.key == "d")
+    if (keys["d"] == true)
         angle -= 0.3
 
-    if (e.key == "j")
+    if (keys["j"] == true)
         angle2 += 0.3
-    else if (e.key == "l")
+    else if (keys["l"] == true)
         angle2 -= 0.3
+
+    console.log(e.key)
     e.preventDefault();
 }
 
 function keyReleased(e) {
     keys[e.key] = false; //mark released keys
 }
-/* document.onkeydown = function (e) {
-    let key = e.key;
-    if (key == "a") {
-        angle += 0.1
-    } else if (key == "d") {
-        angle -= 0.1
-    }
-
-    if (key == "j") {
-        angle2 += 0.1
-    } else if (key == "l") {
-        angle2 -= 0.1
-    }
-    e.preventDefault();
-} */
 
 function createTrack() {
+    let finishTexture = new THREE.TextureLoader().load('models/toppng.com-finishline-black-and-white-finish-line-421x67.png')
+    let geometry1 = new THREE.PlaneGeometry(30, 5, 32)
+    let material1 = new THREE.MeshBasicMaterial({
+        map: finishTexture,
+        side: THREE.DoubleSide
+    })
+    finish = new THREE.Mesh(geometry1, material1)
+    finish.rotateX(Math.PI / 2)
+    finish.position.set(120, 0.6, 60)
+    scene.add(finish)
+    track.rotateX(Math.PI / 2)
+    track.position.set(120, 0, 0)
+
     //Track
-    let track = new THREE.Object3D
     let asphaltTexture = new THREE.TextureLoader().load('models/Asphalt.jpg')
     let geometry2 = new THREE.PlaneGeometry(30, 170, 32)
     let material2 = new THREE.MeshBasicMaterial({
@@ -116,10 +121,9 @@ function createTrack() {
         side: THREE.DoubleSide
     })
     let track1 = new THREE.Mesh(geometry2, material2)
-    track.rotateX(Math.PI / 2)
-    track.position.set(120, 0, 0)
     track1.position.set(0, 10, 0)
     track.add(track1)
+
 
     //Curve 1
     let geometry4 = new THREE.CircleGeometry(30, 32, 0, -Math.PI / 2)
@@ -278,6 +282,8 @@ function createCars() {
             car.scale.set(0.05, 0.05, 0.05);
             car.position.set(125, 0, 80)
             car.rotateX(-Math.PI / 2)
+            bbHelper = new THREE.BoxHelper(car, 0x00FFFF)
+            scene.add(bbHelper)
             scene.add(car);
 
         });
@@ -295,9 +301,11 @@ function createCars() {
             car2.scale.set(0.05, 0.05, 0.05);
             car2.position.set(115, 0, 80)
             car2.rotateX(-Math.PI / 2)
+            bbHelper2 = new THREE.BoxHelper(car2, 0x000FFF)
+            scene.add(bbHelper2)
             scene.add(car2);
             animation()
-            
+
         });
     })
 }
@@ -307,13 +315,13 @@ function acceleration() {
     if (velocity <= 1) {
         velocity += 0.01
     } else {
-        velocity == 1
+        velocity == 0.5
     }
 
     if (velocity2 <= 1) {
         velocity2 += 0.01
     } else {
-        velocity2 == 1
+        velocity2 == 0.5
     }
 
     car.rotation.z = (angle)
@@ -326,15 +334,57 @@ function acceleration() {
 
 }
 
+function collision() {
+    //COLLISION CARS
+    bbHelper.update(car)
+    bbHelper2.update(car2)
+    let BBox = new THREE.Box3().setFromObject(car);
+    let BBox2 = new THREE.Box3().setFromObject(car2);
+    let collision = BBox.intersectsBox(BBox2);
+    if (collision === true) {
+        angle -= 0.3
+        angle2 += 0.3
+    }
+
+    //COLLISION TRACK
+    let origin = car2.position.clone();
+    origin.y += 5
+    let raycaster = new THREE.Raycaster();
+    let direction = new THREE.Vector3(0, -1, 0)
+    var arrowHelper = new THREE.ArrowHelper(direction, origin, 5, 0xffff00);
+    scene.add(arrowHelper)
+    raycaster.set(origin, direction)
+    let intersection = raycaster.intersectObjects(track.children, true);
+    if (intersection.length === 0) {
+        velocity2 = 0
+    }
+
+    let origin2 = car.position.clone();
+    origin2.y += 5
+    let raycaster2 = new THREE.Raycaster();
+    let direction2 = new THREE.Vector3(0, -1, 0)
+    raycaster2.set(origin2, direction2)
+    let intersection2 = raycaster2.intersectObjects(track.children, true);
+    if (intersection2.length === 0) {
+        velocity = 0
+    }
+
+    let raycaster3 = new THREE.Raycasetr();
+    raycaster3.set(origin, direction)
+    let finish = raycaster3.intersectObjects(finish, true)
+    console.log(finish  )
+
+}
+
 function animation() {
     if (count > 0) {
         setInterval(timer(), 1000)
-    }
-    else{
+    } else {
         acceleration()
     }
-    
-    
+
+
+    collision()
 
     renderer.render(scene, camera)
     requestAnimationFrame(animation)
